@@ -1,1 +1,1017 @@
-test
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#f4fbff" />
+  <title>칼퇴런</title>
+  <style>
+    :root {
+      --bg: #f4fbff;
+      --surface: rgba(255, 255, 255, .9);
+      --text: #24343a;
+      --muted: #657782;
+      --primary: #22b8a9;
+      --accent: #ffbd42;
+      --danger: #ff5d5d;
+      --border: rgba(36, 52, 58, .13);
+      --shadow: 0 18px 48px rgba(32, 65, 80, .18);
+      --radius: 8px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--bg); color: var(--text); touch-action: none; overscroll-behavior: none; }
+    button { font: inherit; }
+
+    #app { position: fixed; inset: 0; overflow: hidden; background: #dff7ff; }
+    #game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: 0; }
+
+    .hud {
+      position: absolute;
+      z-index: 5;
+      top: calc(10px + var(--safe-top));
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .hud[hidden], .pads[hidden], .hint[hidden], .error[hidden] { display: none; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(70px, auto)); gap: 6px; max-width: calc(100vw - 70px); }
+    .chip {
+      padding: 8px 9px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .78);
+      box-shadow: 0 8px 18px rgba(32, 65, 80, .11);
+      backdrop-filter: blur(10px);
+    }
+    .chip span { display: block; color: var(--muted); font-size: 10px; line-height: 1; font-weight: 900; }
+    .chip strong { display: block; margin-top: 4px; font-size: clamp(16px, 4vw, 21px); line-height: 1; font-weight: 1000; font-variant-numeric: tabular-nums; }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: var(--radius);
+      color: #fff;
+      background: rgba(36, 52, 58, .86);
+      box-shadow: 0 12px 26px rgba(36, 52, 58, .22);
+      pointer-events: auto;
+      font-size: 18px;
+      font-weight: 1000;
+    }
+
+    .screen {
+      position: absolute;
+      z-index: 10;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: calc(18px + var(--safe-top)) 16px calc(18px + var(--safe-bottom));
+      background: rgba(239, 250, 255, .38);
+      backdrop-filter: blur(7px);
+    }
+    .screen.active { display: grid; }
+    .panel {
+      width: min(430px, 100%);
+      max-height: calc(100vh - 28px - var(--safe-top) - var(--safe-bottom));
+      overflow: auto;
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .hero { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+    h1 { margin: 0; font-size: clamp(42px, 14vw, 64px); line-height: .95; letter-spacing: 0; font-weight: 1000; color: #15363c; }
+    h2 { margin: 0 0 10px; font-size: clamp(32px, 10vw, 48px); line-height: 1; letter-spacing: 0; font-weight: 1000; color: #15363c; }
+    p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; font-weight: 800; }
+
+    .mascot {
+      flex: 0 0 94px;
+      height: 112px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(34, 184, 169, .22);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: 0 12px 24px rgba(34, 184, 169, .14);
+    }
+    .mini { position: relative; width: 66px; height: 86px; }
+    .mini::before {
+      content: "";
+      position: absolute;
+      left: 16px;
+      top: 4px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #ffd9bd;
+      box-shadow: 0 -9px 0 #5a3a2e inset;
+    }
+    .mini::after {
+      content: "이은혜";
+      position: absolute;
+      left: 7px;
+      top: 40px;
+      width: 52px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border: 2px solid #fff;
+      border-radius: var(--radius);
+      background: #2bb6ff;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 1000;
+      box-shadow: 0 8px 0 #1979bb;
+    }
+
+    .features, .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
+    .tile {
+      min-height: 66px;
+      display: grid;
+      align-content: center;
+      gap: 5px;
+      padding: 10px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .8);
+      text-align: center;
+    }
+    .tile span { color: var(--muted); font-size: 11px; font-weight: 900; }
+    .tile strong { font-size: clamp(16px, 5vw, 24px); line-height: 1.1; font-weight: 1000; font-variant-numeric: tabular-nums; }
+
+    .btns { display: grid; gap: 10px; margin-top: 16px; }
+    .primary, .secondary {
+      width: 100%;
+      min-height: 52px;
+      border-radius: var(--radius);
+      font-size: 17px;
+      font-weight: 1000;
+      cursor: pointer;
+    }
+    .primary { border: 0; color: #fff; background: var(--primary); box-shadow: 0 14px 30px rgba(34, 184, 169, .3); }
+    .secondary { color: var(--text); background: #fff; border: 1px solid var(--border); }
+    .primary:active, .secondary:active, .icon-btn:active, .pad:active { transform: translateY(1px) scale(.99); }
+    button:focus-visible { outline: 3px solid rgba(255, 189, 66, .75); outline-offset: 2px; }
+
+    .hint {
+      position: absolute;
+      z-index: 4;
+      left: 50%;
+      bottom: calc(82px + var(--safe-bottom));
+      transform: translateX(-50%);
+      width: min(330px, calc(100vw - 28px));
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, .68);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .72);
+      color: var(--muted);
+      box-shadow: 0 10px 24px rgba(32, 65, 80, .11);
+      text-align: center;
+      font-size: 12px;
+      font-weight: 900;
+      backdrop-filter: blur(9px);
+      pointer-events: none;
+    }
+    .pads {
+      position: absolute;
+      z-index: 6;
+      left: 0;
+      right: 0;
+      bottom: calc(10px + var(--safe-bottom));
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 0 12px;
+      pointer-events: none;
+    }
+    .pad {
+      min-height: 58px;
+      border: 1px solid rgba(255, 255, 255, .65);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .68);
+      color: #15363c;
+      box-shadow: 0 10px 24px rgba(32, 65, 80, .13);
+      backdrop-filter: blur(10px);
+      font-size: 26px;
+      font-weight: 1000;
+      pointer-events: auto;
+    }
+
+    #fx { position: absolute; z-index: 8; inset: 0; pointer-events: none; }
+    .float {
+      position: absolute;
+      left: 50%;
+      top: 42%;
+      min-width: 92px;
+      padding: 9px 12px;
+      border: 1px solid rgba(34, 184, 169, .3);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .94);
+      color: #148b85;
+      box-shadow: 0 12px 28px rgba(32, 65, 80, .16);
+      text-align: center;
+      font-size: 16px;
+      font-weight: 1000;
+      transform: translate(-50%, 0);
+      animation: floatUp .9s ease-out forwards;
+    }
+    .float.bad { color: var(--danger); border-color: rgba(255, 93, 93, .35); }
+    .toast {
+      position: absolute;
+      z-index: 11;
+      left: 50%;
+      bottom: calc(92px + var(--safe-bottom));
+      max-width: min(360px, calc(100vw - 28px));
+      padding: 11px 14px;
+      border-radius: var(--radius);
+      background: rgba(36, 52, 58, .9);
+      color: #fff;
+      box-shadow: 0 16px 34px rgba(36, 52, 58, .22);
+      opacity: 0;
+      transform: translate(-50%, 12px);
+      transition: opacity .16s ease, transform .16s ease;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 900;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .error {
+      position: absolute;
+      z-index: 20;
+      inset: auto 14px calc(18px + var(--safe-bottom));
+      padding: 14px;
+      border: 1px solid rgba(255, 93, 93, .35);
+      border-radius: var(--radius);
+      background: #fff3f3;
+      color: #9b2828;
+      box-shadow: var(--shadow);
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 800;
+    }
+    .shake { animation: shake .36s ease both; }
+
+    @keyframes floatUp {
+      from { opacity: 0; transform: translate(-50%, 14px) scale(.94); }
+      18% { opacity: 1; }
+      to { opacity: 0; transform: translate(-50%, -76px) scale(1.03); }
+    }
+    @keyframes shake {
+      0%,100% { transform: translate3d(0,0,0); }
+      25% { transform: translate3d(-8px,3px,0); }
+      50% { transform: translate3d(7px,-3px,0); }
+      75% { transform: translate3d(-5px,2px,0); }
+    }
+    @media (min-width: 720px) {
+      .hud { top: 18px; left: 18px; right: 18px; }
+      .chip { min-width: 104px; padding: 10px 12px; }
+      .pads { width: 430px; left: 50%; right: auto; transform: translateX(-50%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .float, .shake { animation-duration: 1ms; }
+      .toast { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main id="app" aria-label="칼퇴런 게임">
+    <canvas id="game" aria-label="칼퇴런 3D 러닝 게임 화면"></canvas>
+
+    <div class="hud" id="hud" hidden>
+      <div class="stats" aria-label="게임 정보">
+        <div class="chip"><span>점수</span><strong id="score">0</strong></div>
+        <div class="chip"><span>시간</span><strong id="time">0.0</strong></div>
+        <div class="chip"><span>최고</span><strong id="best">0</strong></div>
+      </div>
+      <button class="icon-btn" id="pauseBtn" type="button" aria-label="일시정지">Ⅱ</button>
+    </div>
+
+    <div id="fx" aria-hidden="true"></div>
+    <div class="hint" id="hint" hidden>화면을 좌우로 드래그하거나 아래 버튼으로 레인을 바꾸세요</div>
+    <div class="pads" id="pads" hidden aria-label="이동 조작">
+      <button class="pad" id="leftBtn" type="button" aria-label="왼쪽으로 이동">‹</button>
+      <button class="pad" id="rightBtn" type="button" aria-label="오른쪽으로 이동">›</button>
+    </div>
+
+    <section class="screen active" id="startScreen" aria-label="시작 화면">
+      <div class="panel">
+        <div class="hero">
+          <div>
+            <h1>칼퇴런</h1>
+            <p>부장님과 야근을 피해 무사히 칼퇴하라!</p>
+          </div>
+          <div class="mascot" aria-hidden="true"><div class="mini"></div></div>
+        </div>
+        <div class="features">
+          <div class="tile"><strong>3레인 질주</strong><span>좌우 이동</span></div>
+          <div class="tile"><strong>직장 밈</strong><span>장애물 회피</span></div>
+          <div class="tile"><strong>칼퇴템</strong><span>보너스 획득</span></div>
+        </div>
+        <button class="primary" id="startBtn" type="button">정시퇴근 시작</button>
+        <p>드래그, 하단 버튼, 키보드 ← → / A D로 이동합니다. 커피와 연차권은 먹고, 회의와 야근 폭탄은 피하세요.</p>
+      </div>
+    </section>
+
+    <section class="screen" id="pauseScreen" aria-label="일시정지 화면">
+      <div class="panel">
+        <h2>잠깐 숨 고르기</h2>
+        <p>아직 퇴근길은 끝나지 않았습니다.</p>
+        <div class="btns">
+          <button class="primary" id="resumeBtn" type="button">계속 달리기</button>
+          <button class="secondary" id="pauseHomeBtn" type="button">시작 화면으로</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="overScreen" aria-label="게임오버 화면">
+      <div class="panel">
+        <h2>칼퇴 실패!</h2>
+        <p id="resultMsg">부장님에게 붙잡혔습니다.</p>
+        <div class="result-grid">
+          <div class="tile"><span>생존 시간</span><strong id="finalTime">0.0초</strong></div>
+          <div class="tile"><span>최종 점수</span><strong id="finalScore">0</strong></div>
+          <div class="tile"><span>획득 아이템</span><strong id="finalItems">0개</strong></div>
+        </div>
+        <div class="btns">
+          <button class="primary" id="retryBtn" type="button">다시 칼퇴 도전</button>
+          <button class="secondary" id="homeBtn" type="button">시작 화면으로</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="error" id="error" hidden>3D 엔진을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 열어주세요.</div>
+  </main>
+
+  <script type="module">
+    (async () => {
+      "use strict";
+
+      let THREE;
+      try {
+        THREE = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
+      } catch (error) {
+        document.getElementById("error").hidden = false;
+        return;
+      }
+
+      const $ = (id) => document.getElementById(id);
+      const canvas = $("game");
+      const app = $("app");
+      const hud = $("hud");
+      const hint = $("hint");
+      const pads = $("pads");
+      const fx = $("fx");
+      const toast = $("toast");
+      const screens = { start: $("startScreen"), pause: $("pauseScreen"), over: $("overScreen") };
+      const ui = {
+        score: $("score"), time: $("time"), best: $("best"),
+        finalTime: $("finalTime"), finalScore: $("finalScore"), finalItems: $("finalItems"), result: $("resultMsg")
+      };
+
+      const lanes = [-2.25, 0, 2.25];
+      const bestKey = "kaltoe-run-best-score";
+      const obstaclesDef = [
+        ["boss", "부장님", "부장님에게 붙잡혔습니다."],
+        ["meeting", "회의 소집", "끝나지 않는 회의에 소환됐습니다."],
+        ["bomb", "야근 폭탄", "야근의 그림자를 피하지 못했습니다."],
+        ["monday", "월요일", "월요일의 중력에 끌려갔습니다."],
+        ["request", "긴급 수정", "퇴근 직전 수정 요청이 도착했습니다."],
+        ["phone", "전화벨", "퇴근 버튼 앞에서 전화가 울렸습니다."],
+        ["pile", "업무더미", "업무더미가 길을 막았습니다."],
+        ["wait", "잠깐만요", "오늘도 정시퇴근은 다음 기회에..."]
+      ];
+      const itemsDef = [
+        ["coffee", "커피", "#8a5a3d"],
+        ["vacation", "연차권", "#37bf72"],
+        ["button", "칼퇴 버튼", "#ffbd42"],
+        ["bonus", "보너스", "#4f8df7"],
+        ["drink", "에너지", "#ff6f91"]
+      ];
+
+      let scene, camera, renderer, clock, player;
+      let parts = {}, decor = [], obstacles = [], items = [], texCache = new Map(), mats = new Map();
+      const pointer = { active: false, x: 0 };
+      const state = {
+        phase: "start", lane: 1, targetLane: 1, playerX: 0,
+        score: 0, best: readBest(), time: 0, speed: 10,
+        spawn: .4, itemSpawn: 1.5, serial: 0, itemCount: 0,
+        invincibleUntil: 0, doubleUntil: 0, boostUntil: 0, shake: 0,
+        reason: "부장님에게 붙잡혔습니다."
+      };
+      const sound = {
+        enabled: false,
+        unlock() {},
+        play(name) { void name; }
+      };
+
+      function readBest() {
+        try { return Number(localStorage.getItem(bestKey)) || 0; } catch { return 0; }
+      }
+      function saveBest(v) {
+        try { localStorage.setItem(bestKey, String(v)); } catch {}
+      }
+      function rnd(list) { return list[Math.floor(Math.random() * list.length)]; }
+      function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+      function scoreText(v) { return Math.floor(v).toLocaleString("ko-KR"); }
+      function mat(name, color, rough = .72, metal = .02) {
+        const key = `${name}-${color}-${rough}-${metal}`;
+        if (!mats.has(key)) mats.set(key, new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal }));
+        return mats.get(key);
+      }
+      function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      }
+      function textTex(text, opt = {}) {
+        const key = JSON.stringify({ text, ...opt });
+        if (texCache.has(key)) return texCache.get(key);
+        const c = document.createElement("canvas");
+        c.width = opt.w || 512; c.height = opt.h || 192;
+        const ctx = c.getContext("2d");
+        ctx.clearRect(0, 0, c.width, c.height);
+        roundRect(ctx, 18, 24, c.width - 36, c.height - 48, opt.r || 36);
+        ctx.fillStyle = opt.bg || "rgba(255,255,255,.94)";
+        ctx.fill();
+        if (opt.border !== "none") {
+          ctx.lineWidth = opt.line || 8;
+          ctx.strokeStyle = opt.border || "rgba(36,52,58,.16)";
+          ctx.stroke();
+        }
+        ctx.fillStyle = opt.fg || "#24343a";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = `${opt.weight || 900} ${opt.size || 58}px -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif`;
+        ctx.fillText(text, c.width / 2, c.height / 2 + 2);
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.minFilter = THREE.LinearFilter;
+        t.magFilter = THREE.LinearFilter;
+        t.generateMipmaps = false;
+        texCache.set(key, t);
+        return t;
+      }
+      function label(text, w = 1.5, h = .5, opt = {}) {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: textTex(text, opt), transparent: true, depthWrite: false }));
+        s.scale.set(w, h, 1);
+        s.renderOrder = 20;
+        return s;
+      }
+      function box(w, h, d, material) { return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material); }
+      function capsule(r, l, material) {
+        const g = THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(r, l, 6, 14) : new THREE.CylinderGeometry(r, r, l + r * 2, 14);
+        return new THREE.Mesh(g, material);
+      }
+      function namePatch(front) {
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(.86, .34),
+          new THREE.MeshBasicMaterial({
+            map: textTex("이은혜", { bg: "#fff", fg: "#111827", border: "#22b8a9", size: 70, line: 10 }),
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          })
+        );
+        mesh.position.set(0, 1.48, front ? -.505 : .505);
+        mesh.rotation.y = front ? Math.PI : 0;
+        mesh.renderOrder = 30;
+        return mesh;
+      }
+
+      function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xdff7ff);
+        scene.fog = new THREE.Fog(0xdff7ff, 18, 68);
+        camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, .1, 120);
+        camera.position.set(0, 4.15, 7.2);
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
+        renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.55));
+        renderer.setSize(innerWidth, innerHeight);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        clock = new THREE.Clock();
+
+        scene.add(new THREE.HemisphereLight(0xffffff, 0xb7e0e7, 1.9));
+        const key = new THREE.DirectionalLight(0xffffff, 2.3);
+        key.position.set(-3.6, 8, 4);
+        scene.add(key);
+        const fill = new THREE.DirectionalLight(0xfff2c7, 1);
+        fill.position.set(4, 4, -5);
+        scene.add(fill);
+
+        buildWorld();
+        player = buildPlayer();
+        scene.add(player);
+        bind();
+        updateHud();
+        requestAnimationFrame(loop);
+      }
+
+      function buildWorld() {
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 130), mat("floor", 0xf7fbff, .86, 0));
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.z = -30;
+        scene.add(floor);
+        [-1, 1].forEach((x) => {
+          const line = new THREE.Mesh(new THREE.PlaneGeometry(.06, 126), mat("lane", 0x22b8a9));
+          line.rotation.x = -Math.PI / 2;
+          line.position.set(x * 1.12, .012, -30);
+          scene.add(line);
+          const rail = box(.18, .55, 128, mat("rail", 0xffffff));
+          rail.position.set(x * 4.25, .28, -30);
+          scene.add(rail);
+        });
+        for (let i = 0; i < 12; i++) {
+          const g = new THREE.Group();
+          [-5.05, 5.05].forEach((x) => {
+            const wall = box(.18, 2.55, 4.6, mat("wall", 0xe8f4f7, .82, 0));
+            wall.position.set(x, 1.25, 0);
+            g.add(wall);
+            const win = box(.2, .8, 1.5, mat("glass", 0xbdefff, .5, .02));
+            win.position.set(x * .995, 1.55, -.7);
+            g.add(win);
+            const pot = box(.42, .34, .42, mat("pot", 0xffbd42));
+            pot.position.set(x > 0 ? 3.7 : -3.7, .17, 1.2);
+            g.add(pot);
+            const plant = new THREE.Mesh(new THREE.ConeGeometry(.36, .72, 8), mat("plant", 0x37bf72));
+            plant.position.set(x > 0 ? 3.7 : -3.7, .7, 1.2);
+            g.add(plant);
+          });
+          const lamp = box(1.6, .08, .36, mat("light", 0xfff1b8));
+          lamp.position.set(0, 3.05, 0);
+          g.add(lamp);
+          const exit = label("EXIT", .82, .3, { bg: "#37bf72", fg: "#fff", border: "none", size: 56 });
+          exit.position.set(0, 2.64, -1.9);
+          g.add(exit);
+          g.position.z = 10 - i * 8;
+          decor.push(g);
+          scene.add(g);
+        }
+      }
+
+      function buildPlayer() {
+        const g = new THREE.Group();
+        const skin = mat("skin", 0xffd9bd, .66, 0), hair = mat("hair", 0x51372f, .8, 0);
+        const shirt = mat("shirt", 0x2bb6ff), skirt = mat("skirt", 0x24343a), shoe = mat("shoe", 0xffbd42);
+        const body = capsule(.48, .62, shirt);
+        body.position.y = 1.42;
+        body.scale.set(1.02, 1, .72);
+        g.add(body);
+        const skirtMesh = new THREE.Mesh(new THREE.CylinderGeometry(.58, .68, .35, 18), skirt);
+        skirtMesh.position.y = .94;
+        g.add(skirtMesh);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(.42, 20, 16), skin);
+        head.position.y = 2.17;
+        g.add(head);
+        const hairBack = new THREE.Mesh(new THREE.SphereGeometry(.45, 18, 12), hair);
+        hairBack.position.set(0, 2.2, .07);
+        hairBack.scale.set(1.06, 1.05, .82);
+        g.add(hairBack);
+        [-.14, .14].forEach((x) => {
+          const eye = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 8), mat("eye", 0x252525));
+          eye.position.set(x, 2.2, -.36);
+          g.add(eye);
+        });
+        const smile = box(.16, .025, .02, mat("smile", 0xe96075));
+        smile.position.set(0, 2.07, -.39);
+        g.add(smile);
+
+        const armGeo = THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(.105, .55, 5, 10) : new THREE.CylinderGeometry(.105, .105, .75, 10);
+        const legGeo = THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(.12, .62, 5, 10) : new THREE.CylinderGeometry(.12, .12, .86, 10);
+        parts.leftArm = limb(g, armGeo, skin, -.56, 1.68, -.34, null, -.18);
+        parts.rightArm = limb(g, armGeo, skin, .56, 1.68, -.34, null, .18);
+        parts.leftLeg = limb(g, legGeo, skin, -.22, .78, -.4, shoe, 0);
+        parts.rightLeg = limb(g, legGeo, skin, .22, .78, -.4, shoe, 0);
+        parts.body = body;
+        parts.head = head;
+        g.add(namePatch(true), namePatch(false));
+        return g;
+      }
+
+      function limb(parent, geo, material, x, y, meshY, shoeMat, zRot) {
+        const pivot = new THREE.Group();
+        const mesh = new THREE.Mesh(geo, material);
+        mesh.position.y = meshY;
+        pivot.position.set(x, y, 0);
+        pivot.rotation.z = zRot;
+        pivot.add(mesh);
+        if (shoeMat) {
+          const s = box(.28, .13, .42, shoeMat);
+          s.position.set(0, -.84, -.08);
+          pivot.add(s);
+        }
+        parent.add(pivot);
+        return pivot;
+      }
+
+      function obstacle(kind) {
+        const def = obstaclesDef.find((o) => o[0] === kind) || rnd(obstaclesDef);
+        const g = new THREE.Group();
+        const tag = label(def[1], def[1].length >= 4 ? 1.8 : 1.35, .52, { bg: "#fff", fg: "#24343a", border: "#ffbd42", size: def[1].length >= 4 ? 48 : 58 });
+        tag.position.y = 2.05;
+        g.add(tag);
+
+        if (kind === "boss") {
+          g.add(Object.assign(capsule(.43, .58, mat("boss", 0x4f8df7)), { position: new THREE.Vector3(0, .9, 0) }));
+          g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.34, 16, 12), mat("bossSkin", 0xffd1ad)), { position: new THREE.Vector3(0, 1.58, 0) }));
+          g.add(Object.assign(box(.42, .055, .035, mat("glasses", 0x24343a)), { position: new THREE.Vector3(0, 1.62, -.3) }));
+        } else if (kind === "meeting") {
+          g.add(Object.assign(box(1.25, 1.1, .22, mat("board", 0x22b8a9)), { position: new THREE.Vector3(0, .82, 0) }));
+          const m = label("회의", .92, .44, { bg: "#fff", fg: "#148b85", border: "none", size: 60 });
+          m.position.set(0, .9, -.14);
+          g.add(m);
+        } else if (kind === "bomb") {
+          g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.54, 18, 14), mat("bomb", 0x343a40)), { position: new THREE.Vector3(0, .68, 0) }));
+          const fuse = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .5, 8), mat("fuse", 0xff6f91));
+          fuse.position.set(.2, 1.1, 0);
+          fuse.rotation.z = -.75;
+          g.add(fuse);
+        } else if (kind === "monday") {
+          g.add(Object.assign(box(1.08, 1.12, .26, mat("calendar", 0xffffff)), { position: new THREE.Vector3(0, .82, 0) }));
+          g.add(Object.assign(box(1.1, .2, .28, mat("calTop", 0xff5d5d)), { position: new THREE.Vector3(0, 1.28, 0) }));
+          const m = label("월", .72, .48, { bg: "rgba(255,255,255,0)", fg: "#ff5d5d", border: "none", size: 90 });
+          m.position.set(0, .82, -.17);
+          g.add(m);
+        } else if (kind === "request" || kind === "pile") {
+          for (let i = 0; i < (kind === "pile" ? 7 : 4); i++) {
+            const p = box(.9 + Math.random() * .2, kind === "pile" ? .14 : .09, .68, mat(`paper${i}`, [0xffffff, 0xe8f4f7, 0xfff1b8, 0xd6f5ef][i % 4]));
+            p.position.set((Math.random() - .5) * .12, .24 + i * .13, (Math.random() - .5) * .08);
+            p.rotation.y = (Math.random() - .5) * .35;
+            g.add(p);
+          }
+          if (kind === "request") {
+            const asap = label("ASAP", .8, .34, { bg: "#ff5d5d", fg: "#fff", border: "none", size: 60 });
+            asap.position.set(0, .92, -.36);
+            g.add(asap);
+          }
+        } else if (kind === "phone") {
+          g.add(Object.assign(box(.95, .38, .72, mat("phone", 0xffbd42)), { position: new THREE.Vector3(0, .54, 0) }));
+          const h = new THREE.Mesh(new THREE.TorusGeometry(.34, .055, 8, 18, Math.PI), mat("handle", 0x24343a));
+          h.position.y = .88;
+          h.rotation.x = Math.PI;
+          g.add(h);
+        } else {
+          const bubble = label("잠깐만요", 1.42, .78, { bg: "#fff", fg: "#ff5d5d", border: "#ff5d5d", size: 52 });
+          bubble.position.y = 1.1;
+          g.add(bubble);
+          g.add(Object.assign(new THREE.Mesh(new THREE.ConeGeometry(.18, .4, 3), mat("stem", 0xffffff)), { position: new THREE.Vector3(.24, .58, 0) }));
+        }
+        g.userData = { type: kind, reason: def[2], radius: kind === "meeting" || kind === "wait" ? 1.05 : .85, passed: false };
+        return g;
+      }
+
+      function item(kind) {
+        const def = itemsDef.find((i) => i[0] === kind) || rnd(itemsDef);
+        const g = new THREE.Group();
+        const glow = new THREE.Mesh(new THREE.TorusGeometry(.56, .035, 8, 28), mat(`glow-${kind}`, def[2], .48, 0));
+        glow.position.y = .72;
+        glow.rotation.x = Math.PI / 2;
+        g.add(glow);
+        if (kind === "coffee") {
+          g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.28, .22, .48, 16), mat("cup", 0xffffff)), { position: new THREE.Vector3(0, .72, 0) }));
+          g.add(Object.assign(box(.5, .16, .08, mat("sleeve", 0x8a5a3d)), { position: new THREE.Vector3(0, .72, -.23) }));
+        } else if (kind === "button") {
+          g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.46, .52, .18, 22), mat("btnBase", 0x24343a)), { position: new THREE.Vector3(0, .5, 0) }));
+          g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.36, .36, .18, 22), mat("btnTop", 0xff5d5d)), { position: new THREE.Vector3(0, .68, 0) }));
+        } else if (kind === "drink") {
+          g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.22, .22, .68, 16), mat("can", 0xff6f91)), { position: new THREE.Vector3(0, .78, 0) }));
+          g.add(Object.assign(box(.4, .12, .05, mat("stripe", 0xffffff)), { position: new THREE.Vector3(0, .8, -.22) }));
+        } else {
+          const card = box(.82, .5, .08, mat(`card-${kind}`, def[2]));
+          card.position.y = .76;
+          card.rotation.z = .12;
+          g.add(card);
+        }
+        const tag = label(def[1], def[1].length >= 4 ? 1.36 : 1.04, .42, { bg: def[2], fg: "#fff", border: "none", size: def[1].length >= 4 ? 44 : 54 });
+        tag.position.y = 1.38;
+        g.add(tag);
+        g.userData = { type: kind, radius: .74 };
+        return g;
+      }
+
+      function spawnObstacle() {
+        if (obstacles.length + items.length > 26) return;
+        const def = rnd(obstaclesDef), lane = Math.floor(Math.random() * 3), g = obstacle(def[0]);
+        g.position.set(lanes[lane], 0, -58);
+        g.userData.serial = ++state.serial;
+        scene.add(g);
+        obstacles.push(g);
+      }
+      function spawnItem() {
+        if (obstacles.length + items.length > 26) return;
+        const def = rnd(itemsDef), lane = Math.floor(Math.random() * 3), g = item(def[0]);
+        g.position.set(lanes[lane], 0, -50 - Math.random() * 12);
+        g.userData.serial = ++state.serial;
+        scene.add(g);
+        items.push(g);
+      }
+      function clearObjects() {
+        obstacles.forEach((o) => scene.remove(o));
+        items.forEach((i) => scene.remove(i));
+        obstacles = [];
+        items = [];
+      }
+
+      function showScreen(name) {
+        Object.entries(screens).forEach(([key, el]) => el.classList.toggle("active", key === name));
+      }
+      function playUi(on) {
+        hud.hidden = !on;
+        hint.hidden = !on;
+        pads.hidden = !on;
+      }
+      function resetPlayer() {
+        state.lane = 1;
+        state.targetLane = 1;
+        state.playerX = 0;
+        player.position.set(0, 0, 0);
+        player.rotation.set(0, 0, 0);
+        player.scale.setScalar(1);
+      }
+      function start() {
+        sound.unlock();
+        sound.play("start");
+        clearObjects();
+        Object.assign(state, {
+          phase: "playing", lane: 1, targetLane: 1, playerX: 0,
+          score: 0, time: 0, speed: 10, spawn: .35, itemSpawn: 1.4,
+          itemCount: 0, invincibleUntil: 0, doubleUntil: 0, boostUntil: 0, shake: 0,
+          reason: "부장님에게 붙잡혔습니다."
+        });
+        resetPlayer();
+        showScreen("");
+        playUi(true);
+        pop("퇴근 카드 찍고 출발!");
+        updateHud();
+      }
+      function home() {
+        state.phase = "start";
+        clearObjects();
+        resetPlayer();
+        playUi(false);
+        showScreen("start");
+      }
+      function pause() {
+        if (state.phase !== "playing") return;
+        state.phase = "paused";
+        playUi(false);
+        showScreen("pause");
+      }
+      function resume() {
+        if (state.phase !== "paused") return;
+        state.phase = "playing";
+        playUi(true);
+        showScreen("");
+        clock.getDelta();
+      }
+      function over(reason) {
+        if (state.phase !== "playing") return;
+        sound.play("crash");
+        state.phase = "over";
+        state.reason = reason || state.reason;
+        state.shake = .32;
+        app.classList.remove("shake");
+        void app.offsetWidth;
+        app.classList.add("shake");
+        float("퇴근 실패!", "bad");
+        const finalScore = Math.floor(state.score);
+        if (finalScore > state.best) {
+          state.best = finalScore;
+          saveBest(finalScore);
+        }
+        ui.result.textContent = state.reason;
+        ui.finalTime.textContent = `${state.time.toFixed(1)}초`;
+        ui.finalScore.textContent = scoreText(finalScore);
+        ui.finalItems.textContent = `${state.itemCount}개`;
+        updateHud();
+        playUi(false);
+        showScreen("over");
+      }
+      function updateHud() {
+        ui.score.textContent = scoreText(state.score);
+        ui.time.textContent = state.time.toFixed(1);
+        ui.best.textContent = scoreText(state.best);
+      }
+      function pop(msg) {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        clearTimeout(pop.timer);
+        pop.timer = setTimeout(() => toast.classList.remove("show"), 1300);
+      }
+      function float(msg, tone = "good") {
+        const n = document.createElement("div");
+        n.className = `float ${tone}`;
+        n.textContent = msg;
+        n.style.left = `${48 + (Math.random() - .5) * 16}%`;
+        n.style.top = `${39 + (Math.random() - .5) * 8}%`;
+        fx.appendChild(n);
+        n.addEventListener("animationend", () => n.remove(), { once: true });
+      }
+      function move(d) {
+        if (state.phase !== "playing") return;
+        state.targetLane = clamp(state.targetLane + d, 0, 2);
+      }
+      function laneFromX(x) {
+        const r = canvas.getBoundingClientRect();
+        state.targetLane = clamp(Math.floor(clamp((x - r.left) / r.width, 0, .999) * 3), 0, 2);
+      }
+
+      function applyItem(type) {
+        sound.play("item");
+        state.itemCount++;
+        if (type === "coffee") { state.score += 250; float("커피 +250"); }
+        else if (type === "vacation") { state.invincibleUntil = Math.max(state.invincibleUntil, state.time + 4.5); state.score += 120; float("연차 무적!"); }
+        else if (type === "button") { state.invincibleUntil = Math.max(state.invincibleUntil, state.time + 2.5); state.score += 500; float("칼퇴 버튼!"); }
+        else if (type === "bonus") { state.doubleUntil = Math.max(state.doubleUntil, state.time + 5.5); state.score += 160; float("점수 2배!"); }
+        else { state.boostUntil = Math.max(state.boostUntil, state.time + 3.2); state.score += 180; float("에너지 업!"); }
+      }
+
+      function update(dt) {
+        state.time += dt;
+        const boosted = state.time < state.boostUntil;
+        const doubled = state.time < state.doubleUntil;
+        state.speed = Math.min(21.5, 10 + state.time * .105) * (boosted ? 1.18 : 1);
+        state.score += dt * (16 + state.speed * 2.2) * (doubled ? 2 : 1);
+
+        state.spawn -= dt;
+        if (state.spawn <= 0) {
+          spawnObstacle();
+          state.spawn = clamp(1.05 - state.time * .006, .54, 1.05) + Math.random() * .35;
+        }
+        state.itemSpawn -= dt;
+        if (state.itemSpawn <= 0) {
+          spawnItem();
+          state.itemSpawn = 2.2 + Math.random() * 2.3;
+        }
+
+        const targetX = lanes[state.targetLane];
+        state.playerX += (targetX - state.playerX) * Math.min(1, dt * 11);
+        const run = state.time * (state.speed * .78);
+        player.position.x = state.playerX;
+        player.position.y = Math.abs(Math.sin(run)) * .085;
+        player.rotation.z = (targetX - state.playerX) * -.12;
+        player.rotation.y = (targetX - state.playerX) * .05;
+        parts.leftArm.rotation.x = Math.sin(run) * .72;
+        parts.rightArm.rotation.x = -Math.sin(run) * .72;
+        parts.leftLeg.rotation.x = -Math.sin(run) * .58;
+        parts.rightLeg.rotation.x = Math.sin(run) * .58;
+        parts.body.rotation.x = Math.sin(run * .5) * .025;
+        parts.head.position.y = 2.17 + Math.sin(run * 2) * .018;
+
+        moveDecor(dt, state.speed);
+        updateList(obstacles, dt, true);
+        updateList(items, dt, false);
+        updateCamera(dt);
+        updateHud();
+      }
+      function idle(t, dt) {
+        player.position.x += (0 - player.position.x) * .08;
+        player.position.y = .03 + Math.sin(t * 2.4) * .035;
+        player.rotation.y = Math.sin(t * .75) * .32;
+        player.rotation.z = Math.sin(t * 1.4) * .025;
+        parts.leftArm.rotation.x = Math.sin(t * 3.5) * .24;
+        parts.rightArm.rotation.x = -Math.sin(t * 3.5) * .24;
+        parts.leftLeg.rotation.x = -.08;
+        parts.rightLeg.rotation.x = .08;
+        moveDecor(dt, 1.8);
+        updateCamera(dt);
+      }
+      function moveDecor(dt, speed) {
+        decor.forEach((g) => {
+          g.position.z += speed * dt;
+          if (g.position.z > 16) g.position.z -= 96;
+        });
+      }
+      function updateList(list, dt, isObstacle) {
+        for (let i = list.length - 1; i >= 0; i--) {
+          const o = list[i];
+          o.position.z += state.speed * dt;
+          o.rotation.y += isObstacle ? Math.sin(state.time * 1.8 + o.userData.serial) * .002 : dt * 2.6;
+          if (!isObstacle) o.position.y = Math.sin(state.time * 4 + o.userData.serial) * .08;
+
+          const hit = Math.abs(o.position.z) < (isObstacle ? .82 : .85) && Math.abs(o.position.x - state.playerX) < o.userData.radius;
+          if (hit && isObstacle) {
+            if (state.time < state.invincibleUntil) {
+              state.score += state.time < state.doubleUntil ? 120 : 60;
+              float("무적 통과!");
+              scene.remove(o);
+              list.splice(i, 1);
+              continue;
+            }
+            over(o.userData.reason);
+            return;
+          }
+          if (hit && !isObstacle) {
+            applyItem(o.userData.type);
+            scene.remove(o);
+            list.splice(i, 1);
+            continue;
+          }
+          if (isObstacle && !o.userData.passed && o.position.z > 1.15) {
+            o.userData.passed = true;
+            state.score += state.time < state.doubleUntil ? 80 : 40;
+          }
+          if (o.position.z > 9) {
+            scene.remove(o);
+            list.splice(i, 1);
+          }
+        }
+      }
+      function updateCamera(dt) {
+        const shake = state.shake;
+        state.shake = Math.max(0, state.shake - dt);
+        camera.position.x += (state.playerX * .18 - camera.position.x) * Math.min(1, dt * 5);
+        camera.position.y = 4.15 + (shake ? (Math.random() - .5) * shake * .35 : 0);
+        camera.position.z = 7.2 + (shake ? (Math.random() - .5) * shake * .5 : 0);
+        camera.lookAt(state.playerX * .16, 1.22, -5.8);
+      }
+      function powerFx() {
+        const inv = state.phase === "playing" && state.time < state.invincibleUntil;
+        const boost = state.phase === "playing" && state.time < state.boostUntil;
+        const dbl = state.phase === "playing" && state.time < state.doubleUntil;
+        player.scale.setScalar(inv ? 1.05 + Math.sin(state.time * 15) * .025 : 1);
+        parts.body.material.emissive.setHex(inv ? 0x154f4a : boost ? 0x4b2834 : dbl ? 0x4a3900 : 0x000000);
+        parts.body.material.emissiveIntensity = inv || boost || dbl ? .18 : 0;
+      }
+      function loop() {
+        requestAnimationFrame(loop);
+        const dt = Math.min(clock.getDelta(), .033);
+        if (state.phase === "playing") update(dt);
+        else idle(clock.elapsedTime, dt);
+        powerFx();
+        renderer.render(scene, camera);
+      }
+
+      function bind() {
+        $("startBtn").addEventListener("click", start);
+        $("retryBtn").addEventListener("click", start);
+        $("homeBtn").addEventListener("click", home);
+        $("pauseHomeBtn").addEventListener("click", home);
+        $("pauseBtn").addEventListener("click", pause);
+        $("resumeBtn").addEventListener("click", resume);
+        $("leftBtn").addEventListener("click", () => move(-1));
+        $("rightBtn").addEventListener("click", () => move(1));
+
+        canvas.addEventListener("pointerdown", (e) => {
+          if (state.phase !== "playing") return;
+          pointer.active = true;
+          pointer.x = e.clientX;
+          laneFromX(e.clientX);
+          canvas.setPointerCapture?.(e.pointerId);
+          e.preventDefault();
+        }, { passive: false });
+        canvas.addEventListener("pointermove", (e) => {
+          if (!pointer.active || state.phase !== "playing") return;
+          laneFromX(e.clientX);
+          e.preventDefault();
+        }, { passive: false });
+        canvas.addEventListener("pointerup", (e) => {
+          if (!pointer.active || state.phase !== "playing") return;
+          const dx = e.clientX - pointer.x;
+          if (Math.abs(dx) < 18) move(pointer.x < innerWidth / 2 ? -1 : 1);
+          else move(dx > 0 ? 1 : -1);
+          pointer.active = false;
+          canvas.releasePointerCapture?.(e.pointerId);
+          e.preventDefault();
+        }, { passive: false });
+        canvas.addEventListener("pointercancel", () => { pointer.active = false; });
+
+        addEventListener("keydown", (e) => {
+          const k = e.key.toLowerCase();
+          if (e.key === "ArrowLeft" || k === "a") move(-1);
+          else if (e.key === "ArrowRight" || k === "d") move(1);
+          else if (e.key === "Escape") state.phase === "playing" ? pause() : resume();
+          else if (e.key === " " && state.phase === "start") start();
+        });
+        addEventListener("resize", () => {
+          camera.aspect = innerWidth / innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(innerWidth, innerHeight);
+          renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.55));
+        });
+        canvas.addEventListener("webglcontextlost", (e) => {
+          e.preventDefault();
+          $("error").hidden = false;
+        });
+      }
+
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
+      else init();
+    })();
+  </script>
+</body>
+</html>
